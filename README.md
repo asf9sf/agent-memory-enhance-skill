@@ -1,12 +1,20 @@
+<div align="center">
+
+<img src="docs/images/banner.jpg" alt="Agent Memory Enhance" width="100%"/>
+
 # 🧠 Agent Memory Enhance
 
-> **让 AI Agent 终于"记住你"。**
->
-> 3 分钟接入，任何 MCP 客户端立刻拥有跨会话长期记忆——告别"金鱼脑"。
+### 让 AI Agent 终于"记住你"。
+
+**3 分钟接入，任何 MCP 客户端立刻拥有跨会话长期记忆——告别"金鱼脑"。**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8%2B-green.svg)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-orange.svg)](https://modelcontextprotocol.io/)
+[![Stars](https://img.shields.io/github/stars/asf9sf/agent-memory-enhance-skill?style=social)](https://github.com/asf9sf/agent-memory-enhance-skill/stargazers)
+[![Issues](https://img.shields.io/github/issues/asf9sf/agent-memory-enhance-skill)](https://github.com/asf9sf/agent-memory-enhance-skill/issues)
+
+</div>
 
 ---
 
@@ -56,6 +64,18 @@ Claude、Cursor、TRAE、Windsurf……这些 AI 工具很强，但每次对话�
 ```
 
 LLM 提取 → 向量索引 → 按需召回 → **省 token、省时间、省心**。
+
+---
+
+## 🎬 效果演示
+
+<div align="center">
+
+| 接入前：每次都是"初次见面" | 接入后：跨会话记得一切 |
+|:---:|:---:|
+| ```User: 我用 PyQt5 做桌面应用```<br/>```AI: 好的，PyQt5 是...```<br/>```(下次对话)```<br/>```User: 帮我加 TTS```<br/>```AI: 好的，请问你的技术栈?``` | ```User: 帮我加 TTS```<br/>```AI: 检索到记忆：你用 PyQt5 桌面应用，```<br/>```    偏好 CPU 离线方案，Sherpa-ONNX 为主引擎。```<br/>```    我建议这样集成...`` |
+
+</div>
 
 ---
 
@@ -175,38 +195,59 @@ python -m agent_memory_enhance.server
 
 ## 🔬 工作原理
 
+<div align="center">
+
+<img src="docs/images/funnel.jpg" alt="三层漏斗检索" width="80%"/>
+
+*三层漏斗检索：从海量记忆中精准筛出当下所需*
+
+</div>
+
 ### 写入：把对话变成结构化记忆
 
-```
-对话原文
-   ↓
-LLM 提取（名称/关键词/摘要/触发场景/重要度）
-   ↓
-生成 Embedding 向量（可选，没有就用 TF-IDF）
-   ↓
-SQLite 持久化
+```mermaid
+flowchart TD
+    A[对话原文] --> B[LLM 提取<br/>名称/关键词/摘要/触发场景/重要度]
+    B --> C{有 Embedding 模型?}
+    C -->|是| D[生成向量索引]
+    C -->|否| E[TF-IDF 字符 bigram 索引]
+    D --> F[SQLite 持久化]
+    E --> F
+    F --> G[✅ 记忆已写入]
 ```
 
 ### 检索：三层漏斗，精准又不浪费 token
 
-```
-用户当前消息
-   ↓
-🌊 第一层：语义匹配 → Top-5 候选（embedding 余弦 / TF-IDF）
-   ↓
-🌊 第二层：LLM 精筛 → 0-3 条真正相关
-   ↓
-🌊 第三层：返回完整原始内容 + 更新访问记录
+```mermaid
+flowchart LR
+    U[用户当前消息] --> L1
+    subgraph L1[🌊 第一层：语义匹配]
+        direction TB
+        A1[Embedding 余弦相似度] --- A2[或 TF-IDF 余弦]
+        A1 --> Top[取 Top-5 候选]
+        A2 --> Top
+    end
+    L1 --> L2
+    subgraph L2[🌊 第二层：LLM 精筛]
+        B1[逐条相关性判断] --> B2[选出 0-3 条真正相关]
+    end
+    L2 --> L3
+    subgraph L3[🌊 第三层：返回完整内容]
+        C1[加载原始内容] --> C2[更新访问记录]
+    end
+    L3 --> R[🚀 返回结果]
 ```
 
 ### 维护：自我进化，越用越聪明
 
-```
-所有活跃记忆
-   ↓
-🔄 合并：相似度 ≥ 0.9 → LLM 合并为更完整版本，旧记忆归档
-   ↓
-⏳ 衰减：重要度 < 3 且 30 天未访问 → 归档
+```mermaid
+flowchart TD
+    M[所有活跃记忆] --> S{两两相似度 ≥ 0.9?}
+    S -->|是| Merge[🔄 LLM 合并为更完整版本]
+    Merge --> Archive1[旧记忆归档]
+    S -->|否| Check{重要度 < 3 且 30 天未访问?}
+    Check -->|是| Archive2[⏳ 衰减归档]
+    Check -->|否| Keep[✅ 保留活跃]
 ```
 
 ---
@@ -220,6 +261,7 @@ agent-memory-enhance-skill/
 │   ├── llm_client.py      # 轻量级 OpenAI 兼容 LLM + Embedding 客户端
 │   ├── memory_core.py     # 记忆系统核心（MemorySkill + MemoryStore + MemSkillManager）
 │   └── server.py          # MCP 服务器，暴露 9 个工具
+├── docs/images/           # 架构图、演示素材
 ├── pyproject.toml
 └── README.md
 ```
@@ -236,10 +278,34 @@ agent-memory-enhance-skill/
 
 ---
 
+## 🤝 谁在用
+
+适配所有 MCP 客户端：
+
+<p align="center">
+  <a href="https://claude.ai"><img src="https://img.shields.io/badge/Claude-Desktop-FF6B35?logo=anthropic" alt="Claude Desktop"/></a>
+  <a href="https://cursor.com"><img src="https://img.shields.io/badge/Cursor-IDE-00D9FF?logo=cursor" alt="Cursor"/></a>
+  <a href="https://www.trae.cn/"><img src="https://img.shields.io/badge/TRAE-Agent-7C3AED" alt="TRAE"/></a>
+  <a href="https://windsurf.com"><img src="https://img.shields.io/badge/Windsurf-Editor-06B6D4" alt="Windsurf"/></a>
+  <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/Any-MCP%20Client-22C55E?logo=data" alt="Any MCP"/></a>
+</p>
+
+---
+
 ## 📄 许可证
 
 MIT —— 想怎么用就怎么用，欢迎 PR、Issue、Star ⭐。
 
 ---
 
-> 让你的 AI 终于不用每次都"重新认识你"。
+<div align="center">
+
+### 🚀 现在就让你的 Agent 拥有记忆
+
+```bash
+pip install agent-memory-enhance
+```
+
+**让你的 AI 终于不用每次都"重新认识你"。**
+
+</div>
